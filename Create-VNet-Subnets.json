@@ -1,0 +1,127 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Deployment location"
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue": "VNet1",
+      "metadata": {
+        "description": "VNet name"
+      }
+    },
+    "vnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/16",
+      "metadata": {
+        "description": "Address prefix"
+      }
+    },
+    "WebSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/24",
+      "metadata": {
+        "description": "Web Subnet Prefix"
+      }
+    },
+    "WebSubnetName": {
+      "type": "string",
+      "defaultValue": "Web",
+      "metadata": {
+        "description": "Web Subnet Name"
+      }
+    },
+    "AppSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.1.0/24",
+      "metadata": {
+        "description": "App Subnet Prefix"
+      }
+    },
+    "AppSubnetName": {
+      "type": "string",
+      "defaultValue": "App",
+      "metadata": {
+        "description": "App Subnet Name"
+      }
+    },
+    "DBSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.2.0/24",
+      "metadata": {
+        "description": "DB Subnet Prefix"
+      }
+    },
+    "DBSubnetName": {
+      "type": "string",
+      "defaultValue": "DB",
+      "metadata": {
+        "description": "DB Subnet Name"
+      }
+    },
+    "GWSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.3.0/29",
+      "metadata": {
+        "description": "Gateway Subnet is optional and is used to connect other VNets. Use /29 Subnet for this."
+      }
+    },
+    "GWSubnetName": {
+      "type": "string",
+      "defaultValue": "GatewaySubnet",
+      "metadata": {
+        "description": "Gateway Subnet Name"
+      }
+    }
+  },
+  "variables": {
+    "location1": "[resourceGroup().location]",
+    "apiVersion": "2015-06-15"
+  },
+  "resources": [
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('vnetName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('vnetAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('WebSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('WebSubnetPrefix')]"
+            }
+          },
+          {
+            "name": "[parameters('AppSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('AppSubnetPrefix')]"
+            }
+          },
+          {
+            "name": "[parameters('DBSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('DBSubnetPrefix')]"
+            }
+          },
+          {
+            "name": "[parameters('GWSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('GWSubnetPrefix')]"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
