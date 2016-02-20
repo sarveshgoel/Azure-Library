@@ -1,0 +1,220 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "osImageUri": {
+      "type": "string",
+      "defaultValue": "https://kalingalabstoracc.blob.core.windows.net/system/Microsoft.Compute/Images/kalingalabstoracc/wintraining-osDisk.f7b0e6cb-3144-4ebc-8771-bef81e3cbd09.vhd"
+    },
+    "osImageVhd": {
+      "type": "string",
+      "defaultValue": "https://kalingamasterimages7963.blob.core.windows.net/vmcontainerb7c31b8a-f854-4345-8fcb-8bc8966d5dbf/osDisk.b7c31b8a-f854-4345-8fcb-8bc8966d5dbf.vhd"
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "defaultValue": "apexvm-vnet1",
+      "metadata": {
+        "description": "This is the name of the Virtual Network"
+      }
+    },
+    "windowsOSVersion": {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "metadata": {
+        "description": "This is the name of the Virtual Network"
+      }
+    },
+    "networkInterfaceName": {
+      "type": "string",
+      "defaultValue": "winVMNic",
+      "metadata": {
+        "description": "This is the prefix name of the Network interfaces"
+      }
+    },
+    "loadBalancerName": {
+      "type": "string",
+      "defaultValue": "lb",
+      "metadata": {
+        "description": "This is the name of the load balancer"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "mindtree",
+      "metadata": {
+        "description": "Admin username"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "defaultValue": "Tra1n1ng!",
+      "metadata": {
+        "description": "Admin password"
+      }
+    },
+    "vmNamePrefix": {
+      "type": "string",
+      "defaultValue": "wintraining",
+      "metadata": {
+        "description": "Prefix to use for VM names"
+      }
+    },
+    "osType": {
+      "type": "string",
+      "defaultValue": "windows",
+      "allowedValues": [
+        "windows",
+        "linux"
+      ]
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_A1",
+      "metadata": {
+        "description": "This is the allowed list of VM sizes"
+      }
+    }
+  },
+  "variables": {
+    "pubAddressName": "wintraining",
+    "availabilitySetName": "AvSet",
+    "storageAccountName": "kalingalabstoracc",
+    "vmStorageAccountContainerName": "vhds",
+    "storageAccountType": "Standard_LRS",
+    "imagePublisher": "MicrosoftWindowsServer",
+    "imageOffer": "WindowsServer",
+    "subnetName": "backendSubnet",
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName'))]",
+    "subnetRef": "[concat(variables('vnetID'),'/subnets/',variables ('subnetName'))]",
+    "numberOfInstances": 40,
+    "lbID": "[resourceId('Microsoft.Network/loadBalancers',parameters('loadBalancerName'))]",
+    "lbPublicIpAddressName": "lbPublicIpAddress"
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "accountType": "[variables('storageAccountType')]"
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "[variables('availabilitySetName')]",
+      "location": "[resourceGroup().location]"
+    },
+    {
+      "name": "[concat(variables('pubAddressName'), copyindex())]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01-preview",
+      "copy": {
+        "name": "pubiploop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[concat(variables('pubAddressName'), copyindex())]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('virtualNetworkName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.1.0/23"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(parameters('networkInterfaceName'), copyindex())]",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "nicLoop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(parameters('vmNamePrefix'), copyindex())]",
+      "copy": {
+        "name": "virtualMachineLoop",
+        "count": "[variables('numberOfInstances')]"
+      },
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', parameters('networkInterfaceName'), copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]"
+      ],
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('availabilitySetName'))]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computername": "[concat(parameters('vmNamePrefix'), copyIndex())]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "osDisk": {
+            "name": "[concat(parameters('vmNamePrefix'),'-osDisk')]",
+            "osType": "[parameters('osType')]",
+            "createOption": "FromImage",
+            "image": {
+              "uri": "[parameters('osImageUri')]"
+            },
+            "vhd": {
+              "uri": "[concat('https://',variables('StorageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',parameters('vmNameprefix'), copyIndex(),'osDisk.vhd')]"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('networkInterfaceName'),copyindex()))]"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
